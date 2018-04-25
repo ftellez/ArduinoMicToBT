@@ -30,6 +30,9 @@ int16_t AcX,AcY,AcZ,Tmp,GyX,GyY,GyZ;
 
 int micInput = 0;
 
+bool isManual = false;
+bool doLog = false;
+
 /*=========================================================================
     APPLICATION SETTINGS
 
@@ -190,20 +193,77 @@ void loop(void)
   //if ( getUserInput(inputs, BUFSIZE) )
   //{
     // Send characters to Bluefruit
-    while(!sendCharBLE(String(AcX),"X Position: ")){ Serial.println("Reintentando..."); }
-  //}
+    if(!isManual){
+      while(!sendCharBLE(String(GyX),"X Position: ")){ Serial.println("Reintentando posicion en X..."); }
+      delay(150);
+      while(!sendCharBLE(String(GyY),"Y Position: ")){ Serial.println("Reintentando posicion en Y..."); }
+      delay(150);
+      while(!sendCharBLE(String(GyZ),"Z Position: ")){ Serial.println("Reintentando posicion en Z..."); }
+      delay(150);
+      while(!sendCharBLE(String(AcX),"X Acceleration: ")){ Serial.println("Reintentando aceleracion en X..."); }
+      delay(150);
+      while(!sendCharBLE(String(AcY),"Y Acceleration: ")){ Serial.println("Reintentando aceleracion en Y..."); }
+      delay(150);
+      while(!sendCharBLE(String(AcZ),"Z Acceleration: ")){ Serial.println("Reintentando aceleracion en Z..."); }
+      delay(150);
+      while(!sendCharBLE(String(analogRead(micInput)),"Mic Input: ")){ Serial.println("Reintentando..."); }
+    } else if(!doLog) { if (strcmp(ble.buffer, "X") == 0) {
+      while(!sendCharBLE(String(GyX),"X Position: ")){ Serial.println("Reintentando posicion en X..."); }
+    } else if (strcmp(ble.buffer, "Y") == 0) {
+      while(!sendCharBLE(String(GyY),"Y Position: ")){ Serial.println("Reintentando posicion en Y..."); }
+    } else if (strcmp(ble.buffer, "Z") == 0) {
+      while(!sendCharBLE(String(GyZ),"Z Position: ")){ Serial.println("Reintentando posicion en Z..."); }
+    } else if (strcmp(ble.buffer, "MIC") == 0) {
+      while(!sendCharBLE(String(analogRead(micInput)),"Mic Input: ")){ Serial.println("Reintentando..."); }
+    } else if (strcmp(ble.buffer, "XYZ") == 0) {
+      while(!sendCharBLE(String(GyX),"X:")){ Serial.println("Reintentando posicion en X..."); }
+      while(!sendCharBLE(String(GyY),"Y:")){ Serial.println("Reintentando posicion en Y..."); }
+      while(!sendCharBLE(String(GyZ),"Z:")){ Serial.println("Reintentando posicion en Z..."); }
+    } else if (strcmp(ble.buffer, "ACX") == 0) {
+      while(!sendCharBLE(String(AcX),"X Acceleration: ")){ Serial.println("Reintentando aceleracion en X..."); }
+    } else if (strcmp(ble.buffer, "ACY") == 0) {
+      while(!sendCharBLE(String(AcY),"Y Acceleration: ")){ Serial.println("Reintentando aceleracion en Y..."); }
+    } else if (strcmp(ble.buffer, "ACZ") == 0) {
+      while(!sendCharBLE(String(AcZ),"Z Acceleration: ")){ Serial.println("Reintentando aceleracion en Z..."); }
+    } else if (strcmp(ble.buffer, "AXYZ") == 0) {
+      while(!sendCharBLE(String(AcX),"AX:")){ Serial.println("Reintentando aceleracion en X..."); }
+      while(!sendCharBLE(String(AcY),"AY:")){ Serial.println("Reintentando aceleracion en Y..."); }
+      while(!sendCharBLE(String(AcZ),"AZ:")){ Serial.println("Reintentando aceleracion en Z..."); }
+    } } else {
+      while(!sendRawCharBLE(String(AcX),"")){ Serial.println("Reintentando aceleracion en X..."); }
+      while(!sendRawCharBLE(String(AcY),",")){ Serial.println("Reintentando aceleracion en Y..."); }
+      while(!sendRawCharBLE(String(AcZ),",")){ Serial.println("Reintentando aceleracion en Z..."); }
+      while(!sendRawCharBLE("\\r\\n","")){ Serial.println("Reintentando CR y NL..."); }
+    }
 
-  while(!sendCharBLE(String(analogRead(micInput)),"Mic Input: ")){ Serial.println("Reintentando..."); }
+    /*if(!doLog){
+      delay(1000);
+    } else {
+      delay(200);
+    }*/
+
+    delay(150);
+  //}
 
   // Check for incoming characters from Bluefruit
   ble.println("AT+BLEUARTRX");
   ble.readline();
-  if (strcmp(ble.buffer, "OK") == 0) {
+  if (strcmp(ble.buffer, "USER") == 0) {
+    isManual = true;
+    Serial.println(ble.buffer);
+  } else if (strcmp(ble.buffer, "AUTO") == 0) {
+    isManual = false;
+    doLog = false;
+    Serial.println(ble.buffer);
+  } else if (strcmp(ble.buffer, "LOG") == 0) {
+    doLog = true;
+  }
+  /*if (strcmp(ble.buffer, "OK") == 0) {
     // no data
     return;
   }
   // Some data was found, its in the buffer
-  Serial.print(F("[Recv] ")); Serial.println(ble.buffer);
+  Serial.print(F("[Recv] ")); Serial.println(ble.buffer);*/
   ble.waitForOK();
 }
 
@@ -273,3 +333,30 @@ bool sendCharBLE(String textInput, String label){
   return true;
 }
 
+bool sendRawCharBLE(String textInput, String label){
+  Serial.print("[Send] ");
+  Serial.println(label);
+
+  ble.print("AT+BLEUARTTX=");
+  ble.println(label);
+
+  // check response stastus
+  /*if (! ble.waitForOK() ) {
+    Serial.println(F("Failed to send?"));
+    return false;
+  }*/
+
+  Serial.print("[Send] ");
+  Serial.println(textInput);
+
+  ble.print("AT+BLEUARTTX=");
+  ble.println(textInput);
+
+  // check response stastus
+  /*if (! ble.waitForOK() ) {
+    Serial.println(F("Failed to send?"));
+    return false;
+  }*/
+
+  return true;
+}
